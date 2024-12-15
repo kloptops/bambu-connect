@@ -17,8 +17,8 @@ class BambuClient:
         self.executeClient.disconnect()
 
     ############# Camera Wrappers #############
-    def start_camera_stream(self, img_callback):
-        self.cameraClient.start_stream(img_callback)
+    def start_camera_stream(self, img_callback, start_camera_stream):
+        self.cameraClient.start_stream(img_callback, start_camera_stream)
 
     def stop_camera_stream(self):
         self.cameraClient.stop_stream()
