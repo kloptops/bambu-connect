@@ -59,36 +59,42 @@ class CameraClient:
                     if img:
                         return bytes(img)
 
-    def capture_stream(self, img_callback):
-        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
+    def capture_stream(self, img_callback, close_callback):
+        try:
+            ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
 
-        jpeg_start = bytearray([0xff, 0xd8, 0xff, 0xe0])
-        jpeg_end = bytearray([0xff, 0xd9])
-        read_chunk_size = 4096
+            jpeg_start = bytearray([0xff, 0xd8, 0xff, 0xe0])
+            jpeg_end = bytearray([0xff, 0xd9])
+            read_chunk_size = 4096
 
-        with socket.create_connection((self.hostname, self.port)) as sock:
-            with ctx.wrap_socket(sock, server_hostname=self.hostname) as ssock:
-                ssock.write(self.auth_packet)
-                buf = bytearray()
-                while self.streaming:
-                    dr = ssock.recv(read_chunk_size)
-                    if not dr:
-                        break
-                    buf += dr
-                    img, buf = self.__find_jpeg__(buf, jpeg_start, jpeg_end)
-                    if img:
-                        img_callback(bytes(img))
+            with socket.create_connection((self.hostname, self.port)) as sock:
+                with ctx.wrap_socket(sock, server_hostname=self.hostname) as ssock:
+                    ssock.write(self.auth_packet)
+                    buf = bytearray()
+                    while self.streaming:
+                        dr = ssock.recv(read_chunk_size)
+                        if not dr:
+                            break
+                        buf += dr
+                        img, buf = self.__find_jpeg__(buf, jpeg_start, jpeg_end)
+                        if img:
+                            img_callback(bytes(img))
 
-    def start_stream(self, img_callback):
+        finally:
+            self.streaming = False
+
+            close_callback()
+
+    def start_stream(self, img_callback, close_callback):
         if self.streaming:
             print("Stream already running.")
             return
 
         self.streaming = True
         self.stream_thread = threading.Thread(
-            target=self.capture_stream, args=(img_callback,)
+            target=self.capture_stream, args=(img_callback, close_callback)
         )
         self.stream_thread.start()
 
