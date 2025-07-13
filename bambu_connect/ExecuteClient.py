@@ -18,15 +18,15 @@ class ExecuteClient:
         client.tls_set(tls_version=ssl.PROTOCOL_TLS, cert_reqs=ssl.CERT_NONE)
         client.tls_insecure_set(True)
         client.connect(self.hostname, 8883, 60)
+        client.loop_start()
         return client
 
     def disconnect(self):
         self.client.disconnect()
+        self.client.loop_stop()
 
     def send_command(self, payload):
-        self.client.loop_start()
         self.client.publish(f"device/{self.serial}/request", payload)
-        self.client.loop_stop()
 
     def send_gcode(self, gcode):
         payload = f'{{"print": {{"command": "gcode_line", "sequence_id": 2006, "param": "{gcode} \n"}}, "user_id":"1234567890"}}'
